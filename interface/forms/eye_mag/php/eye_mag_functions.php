@@ -5382,21 +5382,21 @@ function display_VisualAcuities($pid = 0): string
             $flip_priors_CC[] = $prior;
         }
 
-        $VA_dates = implode("','", $array_va_dates);
-        $VA_SCODVA = implode(',', $array_va_SCODVA);
-        $VA_SCOSVA = implode(',', $array_va_SCOSVA);
-        $VA_CCODVA = implode(',', $array_va_CCODVA);
-        $VA_CCOSVA = implode(',', $array_va_CCOSVA);
-        $VA_PHODVA = implode(',', $array_va_PHODVA);
-        $VA_PHOSVA = implode(',', $array_va_PHOSVA);
-        $VA_ARODVA = implode(',', $array_va_ARODVA);
-        $VA_AROSVA = implode(',', $array_va_AROSVA);
-        $VA_MRODVA = implode(',', $array_va_MRODVA);
-        $VA_MROSVA = implode(',', $array_va_MROSVA);
-        $VA_CRODVA = implode(',', $array_va_CRODVA);
-        $VA_CROSVA = implode(',', $array_va_CROSVA);
-        $VA_CTLODVA = implode(',', $array_va_CTLODVA);
-        $VA_CTLOSVA = implode(',', $array_va_CTLOSVA);
+        $VA_dates = $array_va_dates;
+        $VA_SCODVA = $array_va_SCODVA;
+        $VA_SCOSVA = $array_va_SCOSVA;
+        $VA_CCODVA = $array_va_CCODVA;
+        $VA_CCOSVA = $array_va_CCOSVA;
+        $VA_PHODVA = $array_va_PHODVA;
+        $VA_PHOSVA = $array_va_PHOSVA;
+        $VA_ARODVA = $array_va_ARODVA;
+        $VA_AROSVA = $array_va_AROSVA;
+        $VA_MRODVA = $array_va_MRODVA;
+        $VA_MROSVA = $array_va_MROSVA;
+        $VA_CRODVA = $array_va_CRODVA;
+        $VA_CROSVA = $array_va_CROSVA;
+        $VA_CTLODVA = $array_va_CTLODVA;
+        $VA_CTLOSVA = $array_va_CTLOSVA;
         ?>
         <div>
             <span class="closeButton fas fa-times" id="Close_VAHx" name="Close_VAHx"></span>
@@ -5523,7 +5523,7 @@ function display_VisualAcuities($pid = 0): string
                     var config_byVA = {
                         type: 'line',
                         data: {
-                            labels: '<?php echo js_escape($VA_dates); ?>',
+                            labels: <?php echo js_escape($VA_dates); ?>,
                             datasets: [
                                 <?php
                                 if (!empty($VA_SCODVA) || !empty($VA_SCOSVA)) { ?>
