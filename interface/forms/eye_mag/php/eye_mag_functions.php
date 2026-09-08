@@ -3726,7 +3726,7 @@ function menu_overhaul_top($pid, $encounter, $title = "Eye Exam"): void
  *  @param string $encounter is the current encounter number
  *  @return void
  */
-function menu_overhaul_left($pid, $encounter): void
+function menu_overhaul_left($pid, $encounter, ?string $encounter_date = null): void
 {
     global $form_folder;
     global $pat_data;
@@ -3752,7 +3752,7 @@ function menu_overhaul_left($pid, $encounter): void
                 <table style="text-align:left;">
                     <tr><td class="right" >
                             <?php
-                            $age = getPatientAgeDisplay($pat_data['DOB'], ($encounter_date ?? ''));
+                            $age = getPatientAgeDisplay($pat_data['DOB'], $encounter_date);
                             $DOB = oeFormatShortDate($pat_data['DOB']);
                             echo "<span class='font-weight-bold'>" . xlt('Name') . ":</span> </td><td nowrap> &nbsp;" . text($pat_data['fname']) . "  " . text($pat_data['lname']) . " (" . text($pid) . ")</td></tr>
                                     <tr><td class='right'><span class='font-weight-bold'>" . xlt('DOB') . ":</span></td><td  nowrap> &nbsp;" . text($DOB) . "&nbsp;&nbsp;(" . text($age) . ")";

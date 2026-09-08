@@ -337,7 +337,7 @@ if ($refresh !== null && $refresh !== 'fullscreen') {
         <?php
         $output_priors = priors_select("ALL", $id, $id, $pid);
 
-        menu_overhaul_left($pid, $encounter);
+        menu_overhaul_left($pid, $encounter, $encounter_data['encounter_date'] ?? null);
         //define if this is a new or est patients for coding auto-suggestions
             //TODO: develop logic to recognize post-op visits 99024
             // if a prior encounter within 90 days are procedures with a global period still in effect, then post-op code
