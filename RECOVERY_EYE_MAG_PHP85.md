@@ -46,3 +46,7 @@ Three reproduced defects are in scope:
 ## Exact next safe work
 
 Independent work may continue with source/static hardening that does not depend on provider judgment, including reviewing the three Eye Mag fixes for upstream compatibility and running/adding objective tests when a suitable PHP/OpenEMR test environment is available. Do not submit an upstream PR or change protected runtime state merely to create work. If provider feedback reports a remaining Eye Mag defect, reproduce it in synthetic SANDBOX first and extend this branch with a bounded fix and new durable checkpoint.
+
+## Current upstream compatibility check — 2026-09-08
+
+Read-only comparison against current `openemr/openemr` master `230bf47c37c79c67aa43ec6f85c98dd97f7027c5` confirms all three original defect patterns are still present upstream: `menu_overhaul_left()` still lacks an encounter-date parameter and still falls back to an empty age date, Visual Acuity history still implodes arrays and wraps `js_escape($VA_dates)` in an extra JavaScript string, and `a_issue.php` still loads `eye_base.php` without jQuery UI. The relevant surrounding Eye Mag structures remain compatible with this bounded branch. No upstream source mutation or PR submission was performed in this supervisor cycle.
