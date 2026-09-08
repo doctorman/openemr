@@ -548,7 +548,7 @@ $ROSCOMMENTS   = $rres['ROSCOMMENTS']   ?? '';
     </script>
     <!-- Add Font stuff for the look and feel.  -->
 
-    <?php Header::setupHeader(['datetime-picker', 'purecss', 'shortcut', 'opener', 'dialog'  ]); ?>
+    <?php Header::setupHeader(['datetime-picker', 'jquery-ui', 'jquery-ui-base', 'purecss', 'shortcut', 'opener', 'dialog']); ?>
 
     <link rel="stylesheet" href="<?php echo OEGlobalsBag::getInstance()->getKernel()->getRootDir(); ?>/forms/<?php echo $form_folder; ?>/css/style.css">
     <script src="<?php echo OEGlobalsBag::getInstance()->getWebRoot(); ?>/interface/forms/<?php echo $form_folder; ?>/js/eye_base.php?enc=<?php echo attr($encounter); ?>&providerID=<?php echo attr($providerID); ?>"></script>
