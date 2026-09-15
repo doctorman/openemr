@@ -1,0 +1,14 @@
+--- a/interface/main/main_screen.php
++++ b/interface/main/main_screen.php
+@@ -505,6 +505,10 @@
+ // Pass a unique token, so main.php script can not be run on its own
+ $tokenMainPhp = RandomGenUtils::createUniqueToken();
+ $session->set('token_main_php', $tokenMainPhp);
+-header('Location: ' . OEGlobalsBag::getInstance()->getWebRoot() . "/interface/main/tabs/main.php?token_main=" . urlencode($tokenMainPhp));
++header(
++    'Location: ' . OEGlobalsBag::getInstance()->getWebRoot() .
++    "/interface/main/tabs/main.php?token_main=" . urlencode($tokenMainPhp) .
++    "&site=" . urlencode((string) $session->get('site_id'))
++);
+ exit();
+ ?>
