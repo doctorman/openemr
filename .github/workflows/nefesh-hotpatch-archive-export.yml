@@ -1,0 +1,51 @@
+name: NEFESH hotpatch archive export
+
+on:
+  push:
+    branches:
+      - archive/nefesh-openemr840-hotpatches-20260914
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload PR13710 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr13710-medication-v6
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr13710-medication-v6/
+          if-no-files-found: error
+      - name: Upload PR13711 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr13711-vitals-v3
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr13711-vitals-v3/
+          if-no-files-found: error
+      - name: Upload PR13712 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr13712-session-v4
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr13712-session-v4/
+          if-no-files-found: error
+      - name: Upload PR13713 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr13713-delete-refresh-v1
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr13713-delete-refresh-v1/
+          if-no-files-found: error
+      - name: Upload PR14007 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr14007-orders-bind-order-v1
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr14007-orders-bind-order-v1/
+          if-no-files-found: error
+      - name: Upload PR14009 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr14009-expired-shell-site-context-v1
+          path: NEFESH_HOTPATCH_ARCHIVE/openemr-8.4.0/pr14009-expired-shell-site-context-v1/
+          if-no-files-found: error
