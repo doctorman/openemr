@@ -1,0 +1,17 @@
+NEFESH OpenEMR 8.4.0 core hotpatch carry-forward library
+Created: 2026-09-14
+Base: OpenEMR v8_4_0 commit 53d885e56d4772b4e48810a1f98531c5d19a934d
+Canonical image: openemr/openemr:8.4.0-2026-09-14
+Purpose: keep each NEFESH upstream fix as a separate versioned hotpatch so OpenEMR 8.5 can be re-evaluated patch-by-patch.
+
+PR #13710 -> nefesh-medication-search-ui-hotpatch-v6-openemr840.sh
+  8.4 adaptation: QueryUtils import moved into current v8_4_0 import context; functional PR hunks retained.
+PR #13711 -> nefesh-vitals-core-hotpatch-v3-openemr840.sh
+  Applies cleanly to exact v8_4_0 source.
+PR #13712 -> nefesh-session-warning-hotpatch-v4-openemr840.sh
+  8.4 adaptation: dated_reminders_counter.php final SessionTracker remaining-seconds call adapted to current v8_4_0 context; main.php and SessionTracker hunks retained.
+PR #13713 -> nefesh-delete-refresh-hotpatch-v1-openemr840.sh
+  Applies cleanly to exact v8_4_0 source.
+
+Each patch has its own manifest, payload, stock backup directory, status/install/restore actions, exact baseline hashes, exact candidate hashes, syntax validation, and post-restart health wait.
+Target: canonical SANDBOX only. MAIN is not modified by these scripts unless explicitly invoked against a different container/root.
