@@ -1,0 +1,2 @@
+feesheet-payer-null-v1 for OpenEMR 8.4.1 (built 2026-10-02 by Claude 04e work seat)
+library/FeeSheet.class.php line 113: $this->payer_id = $primary_insurance['provider'] ?? null;  (getInsuranceData() returns false for patients without insurance -> PHP warning "Trying to access array offset on false"; behavior unchanged, payer_id stays null). Upstream master (2026-10-02) still has the unguarded line. Upstream issue: see tracking file.
