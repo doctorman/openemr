@@ -1,0 +1,4 @@
+pr13713-14262-delete-v2 for OpenEMR 8.4.1 (built 2026-10-02 by Claude 04e work seat)
+= #13713 delete-refresh (v1) 3-way merged with upstream PR #14262 (MERGED 2026-10-02: document view Delete button uses document_pid; fixes #14235 "Access denied ... patient context mismatch").
+Files: interface/patient_file/deleter.php (merged), controllers/C_Document.class.php, templates/documents/general_view.html (#14262).
+Retire the #14262 part when OpenEMR ships a release containing it (master 2026-10-02); #13713 part tracked separately.
