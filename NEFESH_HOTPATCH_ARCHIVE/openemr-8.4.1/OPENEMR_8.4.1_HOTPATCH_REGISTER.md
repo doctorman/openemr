@@ -3,7 +3,7 @@
 **Baseline:** OpenEMR `v8_4_1` commit `a43edad9ea6d969fcbcc1df7d8ccc50ad34fd872` (2026-09-20); NEFESH docker image `openemr/openemr:8.4.1-2026-10-01`, MAIN image `nefesh/openemr:8.4.1-2026-10-01-n1` (same base plus `99-nefesh.ini` upload limit, now mounted from compose).
 **Branch base:** this archive branch sits directly on the installed baseline: upstream tag `v8_4_1` (commit `a43edad9ea6d969fcbcc1df7d8ccc50ad34fd872`), so `git diff v8_4_1..HEAD` shows only the NEFESH archive files. Every stock file of every package was verified byte-identical to the `v8_4_1` blob (see each HOTPATCH_NOTE.md and manifest.psv).  
 **Archive date:** 2026-10-02  
-**Count:** 6 hotpatches
+**Count:** 7 hotpatches (6 wrappers + 1 combined package) + 1 data package
 
 Each folder holds the exact candidate payload, the stock/candidate hash manifest, a unified stock-to-candidate `PATCH.diff`, the wrapper and a note. Operational install copies live on the NAS (`/volume2/SandboxEMR/packages` and `/volume2/emr_upgrade/packages`). Replaces the 8.4.0 archive for packages superseded on 8.4.1 (see `archive/nefesh-openemr840-hotpatches-20260914`).
 
@@ -15,6 +15,7 @@ Each folder holds the exact candidate payload, the stock/candidate hash manifest
 | pr13713-14262-delete-v2 | #13707, #14235 | #13713, #14262 | NEW 2026-10-02: supersedes pr13713-delete-refresh-v1; #14262 part retires when a release contains it | `nefesh-delete-refresh-hotpatch-v2-openemr840.sh` |
 | session-shell-combined-v2 | #14008 | #13712, #14009, #14308 | NEW 2026-10-02: supersedes session-shell-combined-v1; #14308 part is an UNMERGED upstream PR | `(lib with NEFESH_PATCH_ROOT)` |
 | feesheet-payer-null-v1 | #14340 | none yet | NEW 2026-10-02: issue #14340 filed by NEFESH; no PR yet | `nefesh-feesheet-payer-null-hotpatch-v1-openemr840.sh` |
+| pr13762-icd10-import-v1 | #13661 | #13762 (data: #14280) | NEW 2026-10-02: installed + tested on SANDBOX and MAIN; import of FY2027 pending | `nefesh-icd10-import-hotpatch-v1-openemr840.sh` |
 
 ## Superseded (kept only in the 8.4.0 archive branch / git history)
 - pr13713-delete-refresh-v1 -> pr13713-14262-delete-v2
@@ -28,3 +29,6 @@ Each folder holds the exact candidate payload, the stock/candidate hash manifest
 
 ## Environment boundary
 Installed and tested on SANDBOX (2026-10-02, UIcheck 25 rows, idle-timeout, document delete, FeeSheet checks) and rolled to MAIN on 2026-10-02 with owner authorization.
+
+## Data package
+- `icd10-fy2027-data-v1` (see its README.md): FY2027 ICD-10-CM/PCS supported-file rows + staging script from upstream PRs #14280/#13762; not a file patch.
