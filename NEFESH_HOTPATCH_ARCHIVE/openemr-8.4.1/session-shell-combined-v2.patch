@@ -1,0 +1,543 @@
+--- a/interface/main/tabs/main.php
++++ b/interface/main/tabs/main.php
+@@ -107,6 +107,7 @@
+         <?php if (OEGlobalsBag::getInstance()->get('prevent_browser_refresh') > 0) { ?>
+         window.addEventListener('beforeunload', (event) => {
+             if (!timed_out) {
++                restoreSession();
+                 event.returnValue = <?php echo xlj('Recommend not leaving or refreshing or you may lose data.'); ?>;
+             }
+         });
+@@ -156,6 +157,241 @@
+         const isServicesOther = (isSms || isFax);
+         var telemetryEnabled = <?php echo js_escape((new TelemetryService())->isTelemetryEnabled()); ?>;
+         var noBackgroundTasks = <?php echo $noBackgroundTasks ? 'true' : 'false'; ?>;
++        const sessionTimeoutWarningSeconds = 60;
++        var sessionTimeoutWarningDeadline = null;
++        var sessionTimeoutWarningTimer = null;
++        var sessionTimeoutWarningStartTimer = null;
++        var sessionTimeoutCheckPending = false;
++        var sessionTimeoutConfirmRetried = false;
++
++        function formatSessionTimeoutRemaining(seconds) {
++            const safeSeconds = Math.max(0, parseInt(seconds, 10) || 0);
++            const minutes = Math.floor(safeSeconds / 60);
++            const remainder = safeSeconds % 60;
++            return `${minutes}:${String(remainder).padStart(2, '0')}`;
++        }
++
++        function getSessionTimeoutWarning() {
++            let warning = document.getElementById('sessionTimeoutWarning');
++            if (warning) {
++                return warning;
++            }
++
++            warning = document.createElement('div');
++            warning.id = 'sessionTimeoutWarning';
++            warning.className = 'alert alert-warning shadow';
++            warning.setAttribute('role', 'alert');
++            warning.style.position = 'fixed';
++            warning.style.top = '1rem';
++            warning.style.left = '50%';
++            warning.style.transform = 'translateX(-50%)';
++            warning.style.zIndex = '2000';
++            warning.style.display = 'none';
++            warning.style.maxWidth = 'calc(100% - 2rem)';
++
++            const message = document.createElement('span');
++            message.textContent = <?php echo xlj('Your session will expire due to inactivity in'); ?> + ' ';
++            warning.appendChild(message);
++
++            const countdown = document.createElement('strong');
++            countdown.id = 'sessionTimeoutCountdown';
++            countdown.setAttribute('aria-live', 'off');
++            countdown.textContent = '1:00';
++            warning.appendChild(countdown);
++
++            const period = document.createTextNode('. ');
++            warning.appendChild(period);
++
++            const button = document.createElement('button');
++            button.type = 'button';
++            button.id = 'sessionTimeoutStayLoggedIn';
++            button.className = 'btn btn-sm btn-primary ml-2';
++            button.textContent = <?php echo xlj('Stay Logged In'); ?>;
++            button.addEventListener('click', stayLoggedInFromSessionWarning);
++            warning.appendChild(button);
++
++            document.body.appendChild(warning);
++            return warning;
++        }
++
++        function clearSessionTimeoutWarningTimers() {
++            if (sessionTimeoutWarningTimer !== null) {
++                window.clearInterval(sessionTimeoutWarningTimer);
++                sessionTimeoutWarningTimer = null;
++            }
++            if (sessionTimeoutWarningStartTimer !== null) {
++                window.clearTimeout(sessionTimeoutWarningStartTimer);
++                sessionTimeoutWarningStartTimer = null;
++            }
++        }
++
++        function hideSessionTimeoutWarning() {
++            const warning = document.getElementById('sessionTimeoutWarning');
++            if (warning) {
++                warning.style.display = 'none';
++            }
++            sessionTimeoutWarningDeadline = null;
++            sessionTimeoutCheckPending = false;
++            sessionTimeoutConfirmRetried = false;
++            clearSessionTimeoutWarningTimers();
++        }
++
++        function requestSessionTimeoutStatus(skipTimeoutReset) {
++            restoreSession();
++            const request = new FormData();
++            if (skipTimeoutReset) {
++                request.append('skip_timeout_reset', '1');
++            }
++            request.append('csrf_token_form', csrf_token_js);
++            return fetch(webroot_url + '/library/ajax/dated_reminders_counter.php', {
++                method: 'POST',
++                credentials: 'same-origin',
++                body: request
++            }).then((response) => {
++                if (!response.ok) {
++                    throw new Error('Session status request failed');
++                }
++                return response.json();
++            });
++        }
++
++        function confirmSessionTimeout() {
++            if (sessionTimeoutCheckPending) {
++                return;
++            }
++            sessionTimeoutCheckPending = true;
++            requestSessionTimeoutStatus(true).then((data) => {
++                sessionTimeoutCheckPending = false;
++                if (data.timeoutMessage && data.timeoutMessage === 'timeout') {
++                    timeoutLogout();
++                    return;
++                }
++
++                if (!Object.prototype.hasOwnProperty.call(data, 'sessionSecondsRemaining')) {
++                    window.setTimeout(confirmSessionTimeout, 5000);
++                    return;
++                }
++
++                const secondsRemaining = parseInt(data.sessionSecondsRemaining, 10);
++                if (isNaN(secondsRemaining)) {
++                    window.setTimeout(confirmSessionTimeout, 5000);
++                    return;
++                }
++                if (secondsRemaining <= 0) {
++                    timeoutLogout();
++                    return;
++                }
++
++                sessionTimeoutConfirmRetried = false;
++                updateSessionTimeoutWarning(secondsRemaining);
++            }).catch(() => {
++                sessionTimeoutCheckPending = false;
++                if (!sessionTimeoutConfirmRetried) {
++                    sessionTimeoutConfirmRetried = true;
++                    window.setTimeout(confirmSessionTimeout, 1000);
++                    return;
++                }
++                timeoutLogout();
++            });
++        }
++
++        function updateSessionTimeoutCountdown() {
++            if (sessionTimeoutWarningDeadline === null) {
++                return;
++            }
++
++            const millisecondsRemaining = sessionTimeoutWarningDeadline - Date.now();
++            const secondsRemaining = Math.max(0, Math.ceil(millisecondsRemaining / 1000));
++            const countdown = document.getElementById('sessionTimeoutCountdown');
++            if (countdown) {
++                countdown.textContent = formatSessionTimeoutRemaining(secondsRemaining);
++            }
++
++            if (secondsRemaining <= 0) {
++                if (sessionTimeoutWarningTimer !== null) {
++                    window.clearInterval(sessionTimeoutWarningTimer);
++                    sessionTimeoutWarningTimer = null;
++                }
++                confirmSessionTimeout();
++            }
++        }
++
++        function showSessionTimeoutWarning() {
++            const warning = getSessionTimeoutWarning();
++            warning.style.display = 'block';
++            updateSessionTimeoutCountdown();
++            if (sessionTimeoutWarningTimer === null && sessionTimeoutWarningDeadline !== null) {
++                sessionTimeoutWarningTimer = window.setInterval(updateSessionTimeoutCountdown, 1000);
++            }
++        }
++
++        function updateSessionTimeoutWarning(secondsRemaining) {
++            const parsedRemaining = parseInt(secondsRemaining, 10);
++            if (isNaN(parsedRemaining)) {
++                return;
++            }
++
++            const remaining = Math.max(0, parsedRemaining);
++            clearSessionTimeoutWarningTimers();
++            sessionTimeoutWarningDeadline = Date.now() + (remaining * 1000);
++            sessionTimeoutCheckPending = false;
++            sessionTimeoutConfirmRetried = false;
++
++            if (remaining <= sessionTimeoutWarningSeconds) {
++                showSessionTimeoutWarning();
++                return;
++            }
++
++            const warning = document.getElementById('sessionTimeoutWarning');
++            if (warning) {
++                warning.style.display = 'none';
++            }
++
++            // The normal reminder poll runs every 60 seconds. Schedule locally from
++            // the server-authoritative deadline so the warning starts at one minute,
++            // then confirm passively in case another tab renewed the same session.
++            const delay = Math.max(0, (remaining - sessionTimeoutWarningSeconds) * 1000);
++            sessionTimeoutWarningStartTimer = window.setTimeout(function() {
++                sessionTimeoutWarningStartTimer = null;
++                requestSessionTimeoutStatus(true).then((data) => {
++                    if (data.timeoutMessage && data.timeoutMessage === 'timeout') {
++                        timeoutLogout();
++                        return;
++                    }
++                    if (Object.prototype.hasOwnProperty.call(data, 'sessionSecondsRemaining')) {
++                        updateSessionTimeoutWarning(data.sessionSecondsRemaining);
++                    } else {
++                        showSessionTimeoutWarning();
++                    }
++                }).catch(() => {
++                    showSessionTimeoutWarning();
++                });
++            }, delay);
++        }
++
++        function stayLoggedInFromSessionWarning() {
++            const button = document.getElementById('sessionTimeoutStayLoggedIn');
++            if (button) {
++                button.disabled = true;
++            }
++
++            requestSessionTimeoutStatus(false).then((data) => {
++                if (data.timeoutMessage && data.timeoutMessage === 'timeout') {
++                    timeoutLogout();
++                    return;
++                }
++
++                if (Object.prototype.hasOwnProperty.call(data, 'sessionSecondsRemaining')) {
++                    updateSessionTimeoutWarning(data.sessionSecondsRemaining);
++                }
++            }).catch((error) => {
++                console.log('Unable to renew session', error);
++            }).finally(() => {
++                if (button) {
++                    button.disabled = false;
++                }
++            });
++        }
+ 
+         /**
+          * Async function to get session value from the server
+@@ -217,9 +453,16 @@
+                 }
+                 return response.json();
+             }).then((data) => {
++                if (!data) {
++                    return;
++                }
+                 if (data.timeoutMessage && (data.timeoutMessage == 'timeout')) {
+                     // timeout has happened, so logout
+                     timeoutLogout();
++                    return;
++                }
++                if (Object.prototype.hasOwnProperty.call(data, 'sessionSecondsRemaining')) {
++                    updateSessionTimeoutWarning(data.sessionSecondsRemaining);
+                 }
+                 if (isPortalEnabled) {
+                     let mail = data.mailCnt;
+@@ -264,10 +507,9 @@
+             if (!noBackgroundTasks) {
+                 setTimeout(function () {
+                     restoreSession();
+-                    // Call the REST "run all due" endpoint via LocalApi (APICSRFTOKEN header).
+-                    // The REST stack does not touch SessionTracker, so no skip_timeout_reset
+-                    // equivalent is needed to avoid resetting the session expiration timer.
+-                    fetch(webroot_url + "/apis/" + site_id_js + "/api/background_service/$run", {
++                    // LocalApi bridges the core session through globals/auth.inc.php, so this
++                    // must opt out of idle-timer reset like other background polls.
++                    fetch(webroot_url + "/apis/" + site_id_js + "/api/background_service/$run?skip_timeout_reset=1", {
+                         method: 'POST',
+                         credentials: 'same-origin',
+                         headers: {
+@@ -574,4 +816,4 @@
+     ?>
+ </body>
+ 
+-</html>
++</html>--- a/library/ajax/dated_reminders_counter.php
++++ b/library/ajax/dated_reminders_counter.php
+@@ -49,4 +49,12 @@
+ $totalNumber = $dueReminders + $activeMessages;
+ $total_counts['reminderText'] = ($totalNumber > 0 ? text((string)$totalNumber) : '');
+ 
++// Background repeater requests include skip_timeout_reset=1, so this read does
++// not extend the session. An unavailable tracker value is deliberately omitted
++// rather than being interpreted as an expired session.
++$sessionSecondsRemaining = SessionTracker::getSessionSecondsRemaining();
++if ($sessionSecondsRemaining !== null) {
++    $total_counts['sessionSecondsRemaining'] = $sessionSecondsRemaining;
++}
++
+ echo json_encode($total_counts);
+--- a/src/Common/Session/SessionTracker.php
++++ b/src/Common/Session/SessionTracker.php
+@@ -18,8 +18,10 @@
+ 
+ namespace OpenEMR\Common\Session;
+ 
++use OpenEMR\Common\Http\CurrentRequest;
+ use OpenEMR\Common\Uuid\UuidRegistry;
+ use OpenEMR\Core\OEGlobalsBag;
++use Symfony\Component\HttpFoundation\Request;
+ 
+ class SessionTracker
+ {
+@@ -63,10 +65,197 @@
+         return false;
+     }
+ 
++    /**
++     * Return the server-authoritative number of seconds before the active session expires.
++     *
++     * A null result means the tracker value is unavailable and must not be interpreted as expiry.
++     */
++    public static function getSessionSecondsRemaining(): ?int
++    {
++        $session = SessionWrapperFactory::getInstance()->getActiveSession();
++        $sessionUuid = $session->get('session_database_uuid');
++        if (empty($sessionUuid)) {
++            return null;
++        }
++
++        $sessionTracker = sqlQueryNoLog(
++            "SELECT GREATEST(0, ? - TIMESTAMPDIFF(SECOND, `last_updated`, NOW())) AS `seconds_remaining` " .
++            "FROM `session_tracker` WHERE `uuid` = ?",
++            [
++                OEGlobalsBag::getInstance()->getInt('timeout'),
++                $sessionUuid,
++            ]
++        );
++        if (!isset($sessionTracker['seconds_remaining']) || !is_numeric($sessionTracker['seconds_remaining'])) {
++            return null;
++        }
++
++        return max(0, (int) $sessionTracker['seconds_remaining']);
++    }
++
+     public static function updateSessionExpiration(): void
+     {
+         $session = SessionWrapperFactory::getInstance()->getActiveSession();
+         sqlStatementNoLog("UPDATE `session_tracker` SET `last_updated` = NOW() WHERE `uuid` = ?", [$session->get('session_database_uuid')]);
++    }
++
++    /**
++     * Whether this request should leave session idle tracking alone.
++     *
++     * Background polls may opt out with skip_timeout_reset=1. Known polling
++     * scripts are also excluded by path so a missing client flag cannot keep
++     * the session alive indefinitely.
++     *
++     * Expiration is still enforced; only the last_updated refresh is skipped.
++     *
++     * @param  array<string, mixed>|null  $requestParams Optional override (tests).
++     *                                                    When null, reads from CurrentRequest.
++     */
++    public static function shouldSkipTimeoutReset(
++        ?array $requestParams = null,
++        ?string $scriptPath = null,
++        ?string $requestMethod = null,
++        ?string $requestUri = null
++    ): bool {
++        if (self::hasTruthySkipTimeoutResetFlag(self::resolveSkipTimeoutResetFlag($requestParams))) {
++            return true;
++        }
++
++        [$resolvedScriptPath, $resolvedMethod, $resolvedUri] = self::resolveRequestIdentity(
++            $scriptPath,
++            $requestMethod,
++            $requestUri
++        );
++
++        return self::isBackgroundPollingRequest($resolvedScriptPath, $resolvedMethod, $resolvedUri);
++    }
++
++    /**
++     * True when the active script/URI is a known automatic poller.
++     */
++    public static function isBackgroundPollingRequest(
++        string $scriptPath,
++        string $requestMethod = 'GET',
++        string $requestUri = ''
++    ): bool {
++        $normalized = self::normalizeScriptPath($scriptPath);
++        $uri = self::normalizeScriptPath($requestUri);
++        $method = strtoupper($requestMethod);
++
++        // Local API background runner (main UI every ~60s via APICSRFTOKEN).
++        // Comment in main.php incorrectly assumed REST never touches SessionTracker;
++        // LocalApi bridges the core session and auth.inc.php would reset idle time.
++        if (
++            str_contains($uri, '/api/background_service/')
++            || str_contains($uri, '/api/background_service/%24')
++        ) {
++            return true;
++        }
++
++        if ($normalized === '') {
++            return false;
++        }
++
++        // GET-only presence/status polls (mutating POSTs still count as activity).
++        $getOnlySuffixes = [
++            '/interface/modules/custom_modules/oe-module-telehealth-jse/public/api/invite.php',
++            '/interface/modules/custom_modules/oe-module-telehealth-jse/public/api/invite_status_batch.php',
++            '/interface/modules/custom_modules/oe-module-telehealth-jse/public/api/patient_status.php',
++        ];
++        foreach ($getOnlySuffixes as $suffix) {
++            if (str_ends_with($normalized, $suffix)) {
++                return $method === 'GET';
++            }
++        }
++
++        // Dated reminders page: AJAX refresh is POST; a plain GET page load is user activity.
++        if (str_ends_with($normalized, '/interface/main/dated_reminders/dated_reminders.php')) {
++            return $method !== 'GET';
++        }
++
++        // Dedicated counter endpoint is always a background poll.
++        if (str_ends_with($normalized, '/library/ajax/dated_reminders_counter.php')) {
++            return true;
++        }
++
++        // Only skip dispatch.php when the route is the background runner.
++        if (str_ends_with($normalized, '/apis/dispatch.php')) {
++            return str_contains($uri, '/api/background_service/');
++        }
++
++        return false;
++    }
++
++    /**
++     * @param  array<string, mixed>|null  $requestParams
++     */
++    private static function resolveSkipTimeoutResetFlag(?array $requestParams): mixed
++    {
++        if ($requestParams !== null) {
++            return $requestParams['skip_timeout_reset'] ?? null;
++        }
++
++        $httpRequest = CurrentRequest::get();
++        $fromBody = $httpRequest->request->get('skip_timeout_reset');
++        if ($fromBody !== null) {
++            return $fromBody;
++        }
++
++        return $httpRequest->query->get('skip_timeout_reset');
++    }
++
++    private static function hasTruthySkipTimeoutResetFlag(mixed $value): bool
++    {
++        if ($value === null || $value === false || $value === '' || $value === 0 || $value === '0') {
++            return false;
++        }
++
++        return true;
++    }
++
++    /**
++     * @return array{0: string, 1: string, 2: string}
++     */
++    private static function resolveRequestIdentity(
++        ?string $scriptPath,
++        ?string $requestMethod,
++        ?string $requestUri
++    ): array {
++        if ($scriptPath !== null && $requestMethod !== null && $requestUri !== null) {
++            return [$scriptPath, $requestMethod, $requestUri];
++        }
++
++        $httpRequest = CurrentRequest::get();
++        $scriptPath ??= self::scriptPathFromHttpRequest($httpRequest);
++        $requestMethod ??= $httpRequest->getMethod();
++        $requestUri ??= $httpRequest->getRequestUri();
++
++        return [$scriptPath, $requestMethod, $requestUri];
++    }
++
++    private static function scriptPathFromHttpRequest(Request $httpRequest): string
++    {
++        foreach (['SCRIPT_NAME', 'PHP_SELF', 'SCRIPT_FILENAME'] as $key) {
++            $candidate = $httpRequest->server->get($key);
++            if (!is_string($candidate) || $candidate === '') {
++                continue;
++            }
++            $normalized = self::normalizeScriptPath($candidate);
++            if ($normalized !== '') {
++                return $normalized;
++            }
++        }
++
++        return '';
++    }
++
++    private static function normalizeScriptPath(string $path): string
++    {
++        // Normalize Windows separators to forward slashes.
++        $path = str_replace(chr(92), '/', $path);
++        $path = explode('?', $path, 2)[0];
++
++        return rtrim($path, '/');
+     }
+ 
+     // Function to update the throttle down function (ie. counting scripts)
+--- a/interface/main/main_screen.php
++++ b/interface/main/main_screen.php
+@@ -505,6 +505,10 @@
+ // Pass a unique token, so main.php script can not be run on its own
+ $tokenMainPhp = RandomGenUtils::createUniqueToken();
+ $session->set('token_main_php', $tokenMainPhp);
+-header('Location: ' . OEGlobalsBag::getInstance()->getWebRoot() . "/interface/main/tabs/main.php?token_main=" . urlencode($tokenMainPhp));
++header(
++    'Location: ' . OEGlobalsBag::getInstance()->getWebRoot() .
++    "/interface/main/tabs/main.php?token_main=" . urlencode($tokenMainPhp) .
++    "&site=" . urlencode((string) $session->get('site_id'))
++);
+ exit();
+ ?>
+--- a/library/auth.inc.php
++++ b/library/auth.inc.php
+@@ -110,9 +110,9 @@
+         EventAuditLogger::getInstance()->newEvent("logout", $session->get('authUser'), $session->get('authProvider'), 0, "timeout, so force logout");
+         authCloseSession();
+         authLoginScreen(true);
+-    } elseif (empty($_REQUEST['skip_timeout_reset'])) {
+-        // Reset the session expiration timer unless the request opts out (e.g. background
+-        // polling from Messages, Reminders, or the Flow Board).
++    } elseif (!SessionTracker::shouldSkipTimeoutReset()) {
++        // Reset the idle timer for real user activity only. Background polls may
++        // send skip_timeout_reset=1 or match known polling script paths.
+         SessionTracker::updateSessionExpiration();
+     }
+ }

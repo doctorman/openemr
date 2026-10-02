@@ -1,0 +1,5 @@
+session-shell-combined-v2 for OpenEMR 8.4.1 (built 2026-10-02 by Claude 04e work seat)
+= session-shell-combined-v1 (#13712 + #14009 v2) 3-way merged with upstream PR #14308 (fix(session): prevent background polls from resetting idle timeout, OPEN/unmerged as of 2026-10-02; author juggernautsei).
+Files: interface/main/tabs/main.php, src/Common/Session/SessionTracker.php (merged); library/auth.inc.php (#14308); dated_reminders_counter.php + main_screen.php unchanged from v1.
+Method: git merge-file, all files LF, base = stock openemr/openemr:8.4.1-2026-10-01. Merge was conflict-free.
+Retire when #14308 (or equivalent) is released; re-evaluate #13712/#14009 separately.
