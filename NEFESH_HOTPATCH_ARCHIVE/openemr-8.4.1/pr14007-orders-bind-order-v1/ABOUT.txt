@@ -1,0 +1,11 @@
+NEFESH OpenEMR 8.4.0 core hotpatch: PR #14007 orders/procedure_type bind order
+Created: 2026-09-14
+Upstream issue: https://github.com/openemr/openemr/issues/14006
+Upstream PR: https://github.com/openemr/openemr/pull/14007
+Fork commit: 9b1ed741e57965a4e180aa187b8f9a4d1288395c
+Official baseline: OpenEMR v8_4_0 commit 53d885e56d4772b4e48810a1f98531c5d19a934d
+Target: interface/orders/types_edit.php
+Fix: prepend parent to positional bind array before INSERT into procedure_type.
+Affected upstream source: OpenEMR 8.3, 8.4, and master at report time.
+Retirement: remove only after an installed official OpenEMR release contains an equivalent upstream fix and passes NEFESH regression validation.
+Rollback: use wrapper restore/uninstall; exact stock backup is retained by the shared helper.
